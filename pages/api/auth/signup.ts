@@ -3,6 +3,7 @@ import validator from 'validator';
 import bcryt from 'bcrypt';
 import prisma from '../../../app/lib/prisma';
 import * as jose from 'jose';
+import { setCookie } from 'cookies-next';
 
 export default async function handler(
 	req: NextApiRequest,
@@ -91,7 +92,9 @@ export default async function handler(
 				.setExpirationTime('24h')
 				.sign(secret);
 
-			res.status(200).json({ token });
+			setCookie('jwt', token, { req, res, maxAge: 60 * 60 * 24 });
+
+			res.status(200).json({ ...user });
 		} catch (error) {
 			console.log(error);
 			return res.status(400).json(error);

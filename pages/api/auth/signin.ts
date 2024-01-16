@@ -3,6 +3,7 @@ import validator from 'validator';
 import bcrypt from 'bcrypt';
 import prisma from '../../../app/lib/prisma';
 import * as jose from 'jose';
+import { setCookie } from 'cookies-next';
 
 export default async function handler(
 	req: NextApiRequest,
@@ -36,20 +37,17 @@ export default async function handler(
 				return res.status(400).json({ errorMessage: errors[0] });
 			}
 
-			const userWithEmail = await prisma.user.findUnique({
+			const user = await prisma.user.findUnique({
 				where: {
 					email,
 				},
 			});
 
-			if (!userWithEmail) {
+			if (!user) {
 				return res.status(401).json({ errorMessage: 'Invalid credentials' });
 			}
 
-			const isPasswordMatch = await bcrypt.compare(
-				password,
-				userWithEmail.password,
-			);
+			const isPasswordMatch = await bcrypt.compare(password, user.password);
 
 			if (!isPasswordMatch) {
 				return res.status(401).json({ errorMessage: 'Invalid credentials' });
@@ -59,14 +57,16 @@ export default async function handler(
 			const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 			const token = await new jose.SignJWT({
-				email: userWithEmail.email,
-				id: userWithEmail.id,
+				email: user.email,
+				id: user.id,
 			})
 				.setProtectedHeader({ alg })
 				.setExpirationTime('24h')
 				.sign(secret);
 
-			return res.status(200).json({ token });
+			setCookie('jwt', token, { req, res, maxAge: 60 * 60 * 24 });
+
+			return res.status(200).json({ ...user });
 		}
 
 		return res.status(404).json('Route not found');
