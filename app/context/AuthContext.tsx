@@ -1,97 +1,97 @@
-'use client';
+"use client";
 
-import { User } from '@prisma/client';
-import {
-	FC,
-	PropsWithChildren,
-	useState,
-	createContext,
-	Dispatch,
-	SetStateAction,
-	useEffect,
-} from 'react';
-import useAuth from '../../hooks/useAuth';
-import { getCookie } from 'cookies-next';
-import axios, { AxiosError } from 'axios';
+import axios from "axios";
+import { getCookie } from "cookies-next";
+import React, { useState, createContext, useEffect } from "react";
 
-export interface AuthContextProps extends PropsWithChildren {}
-
-export interface State {
-	loading: boolean;
-	error: string | null;
-	data: User | null;
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  city: string;
+  phone: string;
 }
 
-export interface AuthState extends State {
-	setAuthState: Dispatch<SetStateAction<State>>;
+interface State {
+  loading: boolean;
+  error: string | null;
+  data: User | null;
 }
 
-export const initialeAuthState = {
-	loading: true,
-	data: null,
-	error: null,
-	setAuthState: () => {},
-};
+interface AuthState extends State {
+  setAuthState: React.Dispatch<React.SetStateAction<State>>;
+}
 
-export const AuthenticationContext =
-	createContext<AuthState>(initialeAuthState);
+export const AuthenticationContext = createContext<AuthState>({
+  loading: false,
+  error: null,
+  data: null,
+  setAuthState: () => {},
+});
 
-const AuthContext: FC<AuthContextProps> = ({ children }) => {
-	const [authState, setAuthState] = useState<State>(initialeAuthState);
-	const fetchUser = async () => {
-		setAuthState({
-			data: null,
-			loading: true,
-			error: null,
-		});
-		try {
-			const jwt = getCookie('jwt');
+export default function AuthContext({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [authState, setAuthState] = useState<State>({
+    loading: true,
+    data: null,
+    error: null,
+  });
 
-			if (!jwt) {
-				return setAuthState({
-					data: null,
-					loading: false,
-					error: null,
-				});
-			}
+  const fetchUser = async () => {
+    setAuthState({
+      data: null,
+      error: null,
+      loading: true,
+    });
+    try {
+      const jwt = getCookie("jwt");
 
-			const res = await axios.get('http://localhost:3000/api/auth/me', {
-				headers: {
-					Authorization: `Bearer ${jwt}`,
-				},
-			});
+      if (!jwt) {
+        return setAuthState({
+          data: null,
+          error: null,
+          loading: false,
+        });
+      }
 
-			axios.defaults.headers.common.Authorization = `Bearer ${jwt}`;
+      const response = await axios.get("http://localhost:3000/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+        },
+      });
 
-			setAuthState({
-				data: res.data,
-				loading: false,
-				error: null,
-			});
-		} catch (e) {
-			const error = e as unknown as AxiosError<{ errorMessage: string }>;
-			setAuthState((prevState) => ({
-				...prevState,
-				loading: false,
-				data: null,
-				error: error.response?.data.errorMessage || 'Something went wrong',
-			}));
-		}
-	};
+      axios.defaults.headers.common["Authorization"] = `Bearer ${jwt}`;
 
-	useEffect(() => {
-		fetchUser();
-	}, []);
+      setAuthState({
+        data: response.data,
+        error: null,
+        loading: false,
+      });
+    } catch (error: any) {
+      setAuthState({
+        data: null,
+        error: error.response.data.errorMessage,
+        loading: false,
+      });
+    }
+  };
 
-	return (
-		<AuthenticationContext.Provider
-			value={{
-				...authState,
-				setAuthState,
-			}}>
-			{children}
-		</AuthenticationContext.Provider>
-	);
-};
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
-export default AuthContext;
+  return (
+    <AuthenticationContext.Provider
+      value={{
+        ...authState,
+        setAuthState,
+      }}
+    >
+      {children}
+    </AuthenticationContext.Provider>
+  );
+}

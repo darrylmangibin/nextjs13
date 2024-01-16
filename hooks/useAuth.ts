@@ -1,87 +1,113 @@
-import axios, { Axios, AxiosError } from 'axios';
-import { AuthenticationContext } from '../app/context/AuthContext';
-import { useContext } from 'react';
-import { User } from '@prisma/client';
-import { getCookie } from 'cookies-next';
-
-export type AuthBody = Pick<User, 'city' | 'email' | 'password' | 'phone'> & {
-	firstName: string;
-	lastName: string;
-};
-
-export type SigninBody = Pick<AuthBody, 'email' | 'password'>;
+import axios from "axios";
+import { getCookie, removeCookies } from "cookies-next";
+import { useContext } from "react";
+import { AuthenticationContext } from "../app/context/AuthContext";
 
 const useAuth = () => {
-	const { data, error, loading, setAuthState } = useContext(
-		AuthenticationContext,
-	);
+  const { setAuthState } = useContext(AuthenticationContext);
 
-	const signin = async ({ email, password }: SigninBody, cb?: () => void) => {
-		setAuthState((prevState) => ({
-			...prevState,
-			loading: true,
-		}));
-		try {
-			const res = await axios.post('http://localhost:3000/api/auth/signin', {
-				email,
-				password,
-			});
+  const signin = async (
+    {
+      email,
+      password,
+    }: {
+      email: string;
+      password: string;
+    },
+    handleClose: () => void
+  ) => {
+    setAuthState({
+      data: null,
+      error: null,
+      loading: true,
+    });
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/auth/signin",
+        {
+          email,
+          password,
+        }
+      );
+      setAuthState({
+        data: response.data,
+        error: null,
+        loading: false,
+      });
+      handleClose();
+    } catch (error: any) {
+      setAuthState({
+        data: null,
+        error: error.response.data.errorMessage,
+        loading: false,
+      });
+    }
+  };
+  const signup = async (
+    {
+      email,
+      password,
+      firstName,
+      lastName,
+      city,
+      phone,
+    }: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      city: string;
+      phone: string;
+    },
+    handleClose: () => void
+  ) => {
+    setAuthState({
+      data: null,
+      error: null,
+      loading: true,
+    });
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/auth/signup",
+        {
+          email,
+          password,
+          firstName,
+          lastName,
+          city,
+          phone,
+        }
+      );
+      setAuthState({
+        data: response.data,
+        error: null,
+        loading: false,
+      });
+      handleClose();
+    } catch (error: any) {
+      setAuthState({
+        data: null,
+        error: error.response.data.errorMessage,
+        loading: false,
+      });
+    }
+  };
 
-			setAuthState((prevState) => ({
-				...prevState,
-				loading: false,
-				data: res.data,
-			}));
-			cb?.();
-		} catch (e) {
-			const error = e as unknown as AxiosError<{ errorMessage: string }>;
-			setAuthState((prevState) => ({
-				...prevState,
-				loading: false,
-				data: null,
-				error: error.response?.data.errorMessage || 'Something went wrong',
-			}));
-		}
-	};
+  const signout = () => {
+    removeCookies("jwt");
 
-	const signup = async (
-		{ city, email, firstName, lastName, password, phone }: AuthBody,
-		cb?: () => void,
-	) => {
-		setAuthState((prevState) => ({
-			...prevState,
-			loading: true,
-		}));
-		try {
-			const res = await axios.post('http://localhost:3000/api/auth/signup', {
-				firstName,
-				lastName,
-				city,
-				email,
-				password,
-				phone,
-			});
-			setAuthState((prevState) => ({
-				...prevState,
-				loading: false,
-				data: res.data,
-			}));
-			cb?.();
-		} catch (e) {
-			const error = e as unknown as AxiosError<{ errorMessage: string }>;
-			setAuthState((prevState) => ({
-				...prevState,
-				loading: false,
-				data: null,
-				error: error.response?.data.errorMessage || 'Something went wrong',
-			}));
-		}
-	};
+    setAuthState({
+      data: null,
+      error: null,
+      loading: false,
+    });
+  };
 
-	return {
-		signin,
-		signup,
-	};
+  return {
+    signin,
+    signup,
+    signout,
+  };
 };
 
 export default useAuth;

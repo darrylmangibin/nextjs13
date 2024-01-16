@@ -1,76 +1,82 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import validator from 'validator';
-import bcrypt from 'bcrypt';
-import prisma from '../../../app/lib/prisma';
-import * as jose from 'jose';
-import { setCookie } from 'cookies-next';
+import { PrismaClient } from "@prisma/client";
+import { NextApiRequest, NextApiResponse } from "next";
+import validator from "validator";
+import bcrypt from "bcrypt";
+import * as jose from "jose";
+import { setCookie } from "cookies-next";
+
+const prisma = new PrismaClient();
 
 export default async function handler(
-	req: NextApiRequest,
-	res: NextApiResponse,
+  req: NextApiRequest,
+  res: NextApiResponse
 ) {
-	try {
-		if (req.method === 'POST') {
-			const { email, password } = req.body;
-			const errors: string[] = [];
+  if (req.method === "POST") {
+    const errors: string[] = [];
+    const { email, password } = req.body;
 
-			const validationSchema = [
-				{
-					valid: validator.isEmail(email),
-					errorMessage: 'Email is invalid',
-				},
-				{
-					valid: validator.isLength(password, {
-						min: 1,
-					}),
-					errorMessage: 'Password is invalid',
-				},
-			];
+    const validationSchema = [
+      {
+        valid: validator.isEmail(email),
+        errorMessage: "Email is invalid",
+      },
+      {
+        valid: validator.isLength(password, {
+          min: 1,
+        }),
+        errorMessage: "Password is invalid",
+      },
+    ];
 
-			validationSchema.forEach((check) => {
-				if (!check.valid) {
-					errors.push(check.errorMessage);
-				}
-			});
+    validationSchema.forEach((check) => {
+      if (!check.valid) {
+        errors.push(check.errorMessage);
+      }
+    });
 
-			if (errors.length) {
-				return res.status(400).json({ errorMessage: errors[0] });
-			}
+    if (errors.length) {
+      return res.status(400).json({ errorMessage: errors[0] });
+    }
 
-			const user = await prisma.user.findUnique({
-				where: {
-					email,
-				},
-			});
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
 
-			if (!user) {
-				return res.status(401).json({ errorMessage: 'Invalid credentials' });
-			}
+    if (!user) {
+      return res
+        .status(401)
+        .json({ errorMessage: "Email or password is invalid" });
+    }
 
-			const isPasswordMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
 
-			if (!isPasswordMatch) {
-				return res.status(401).json({ errorMessage: 'Invalid credentials' });
-			}
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ errorMessage: "Email or password is invalid" });
+    }
 
-			const alg = 'HS256';
-			const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const alg = "HS256";
 
-			const token = await new jose.SignJWT({
-				email: user.email,
-				id: user.id,
-			})
-				.setProtectedHeader({ alg })
-				.setExpirationTime('24h')
-				.sign(secret);
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
-			setCookie('jwt', token, { req, res, maxAge: 60 * 60 * 24 });
+    const token = await new jose.SignJWT({ email: user.email })
+      .setProtectedHeader({ alg })
+      .setExpirationTime("24h")
+      .sign(secret);
 
-			return res.status(200).json({ ...user });
-		}
+    setCookie("jwt", token, { req, res, maxAge: 60 * 6 * 24 });
 
-		return res.status(404).json('Route not found');
-	} catch (error) {
-		res.status(400).json(error);
-	}
+    return res.status(200).json({
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      phone: user.phone,
+      city: user.city,
+    });
+  }
+
+  return res.status(404).json("Unknown endpoint");
 }

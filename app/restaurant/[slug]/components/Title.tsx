@@ -1,11 +1,7 @@
-import { FC } from 'react';
-
-const Title: FC<{ name: string }> = ({ name }) => {
-	return (
-		<div className='mt-4 border-b pb-6'>
-			<h1 className='font-bold text-6xl'>{name}</h1>
-		</div>
-	);
-};
-
-export default Title;
+export default function Title({ name }: { name: string }) {
+  return (
+    <div className="mt-4 border-b pb-6">
+      <h1 className="font-bold text-6xl">{name}</h1>
+    </div>
+  );
+}

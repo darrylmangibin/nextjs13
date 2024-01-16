@@ -1,37 +1,39 @@
-import RestaurantNavBar from '../components/RestaurantNavBar';
-import Menu from '../components/Menu';
-import { FC } from 'react';
-import prisma from '../../../lib/prisma';
-import { Item } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import Menu from "../components/Menu";
+import RestaurantNavBar from "../components/RestaurantNavBar";
 
-const ferchRestaurantMenu = async (slug: string): Promise<Item[]> => {
-	const restaurant = await prisma.restaurant.findUnique({
-		where: {
-			slug,
-		},
-		select: {
-			items: true,
-		},
-	});
+const prisma = new PrismaClient();
 
-	if (!restaurant?.items) {
-		throw new Error();
-	}
+const fetchRestaurantMenu = async (slug: string) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: {
+      slug,
+    },
+    select: {
+      items: true,
+    },
+  });
 
-	return restaurant.items;
+  if (!restaurant) {
+    throw new Error();
+  }
+
+  return restaurant.items;
 };
 
-const RestaurantMenu: FC<{ params: { slug: string } }> = async ({ params }) => {
-	const menu = await ferchRestaurantMenu(params.slug);
+export default async function RestaurantMenu({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const menu = await fetchRestaurantMenu(params.slug);
 
-	return (
-		<div className='flex m-auto w-2/3 justify-between items-start 0 -mt-11'>
-			<div className='bg-white w-[100%] rounded p-3 shadow'>
-				<RestaurantNavBar slug={params.slug} />
-				<Menu menu={menu} />
-			</div>
-		</div>
-	);
-};
-
-export default RestaurantMenu;
+  return (
+    <>
+      <div className="bg-white w-[100%] rounded p-3 shadow">
+        <RestaurantNavBar slug={params.slug} />
+        <Menu menu={menu} />
+      </div>
+    </>
+  );
+}

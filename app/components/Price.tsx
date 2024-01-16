@@ -1,38 +1,28 @@
-import { PRICE } from '@prisma/client';
-import React, { FC } from 'react';
+import { PRICE } from "@prisma/client";
+import React from "react";
 
-export interface PriceProps {
-	price: PRICE;
+export default function Price({ price }: { price: PRICE }) {
+  const renderPrice = () => {
+    if (price === PRICE.CHEAP) {
+      return (
+        <>
+          <span>$$</span> <span className="text-gray-400">$$</span>
+        </>
+      );
+    } else if (price === PRICE.REGULAR) {
+      return (
+        <>
+          <span>$$$</span> <span className="text-gray-400">$</span>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <span>$$$$</span>
+        </>
+      );
+    }
+  };
+
+  return <p className="flex mr-3">{renderPrice()}</p>;
 }
-
-const CheapPrice: FC = () => (
-	<>
-		<span className='font-bold'>$$</span>
-		<span className='text-gray-400'>$$</span>
-	</>
-);
-
-const RegularPrice: FC = () => (
-	<>
-		<span className='font-bold'>$$$</span>
-		<span className='text-gray-400'>$</span>
-	</>
-);
-
-const ExpensivePrice: FC = () => (
-	<>
-		<span className='font-bold'>$$$$</span>
-	</>
-);
-
-const renderPrice = {
-	CHEAP: () => <CheapPrice />,
-	REGULAR: () => <RegularPrice />,
-	EXPENSIVE: () => <ExpensivePrice />,
-};
-
-const Price: FC<PriceProps> = ({ price }) => {
-	return renderPrice[price]();
-};
-
-export default Price;
